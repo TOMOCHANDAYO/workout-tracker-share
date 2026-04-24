@@ -151,7 +151,76 @@ const writeStorage = (k, v) => {
 
 const sGet = async (k) => readStorage(k);
 const sSet = async (k, v) => writeStorage(k, v);
-const SK = { logs: "v9-logs", sleep: "v9-sleep", cardio: "v9-cardio", photos: "v9-photos", custom: "v9-custom", nutri: "v9-nutri" };
+const SK = { logs: "v9-logs", sleep: "v9-sleep", cardio: "v9-cardio", photos: "v9-photos", custom: "v9-custom", nutri: "v9-nutri", ui: "v9-ui" };
+
+const HOME_STYLES = {
+  memo: {
+    id: "memo",
+    badge: "MEMO",
+    name: "実用メモ",
+    note: "筋トレMEMO寄りの密度高め",
+    title: "トレーニングメモ",
+    shellBg: C.card,
+    shellBorder: C.border,
+    shellShadow: "0 18px 44px rgba(0,0,0,.28)",
+    shellAccent: C.amber,
+    shellTint: C.surface,
+    heroBg: C.surface,
+    primaryBg: C.amber,
+    primaryText: C.inv,
+    secondaryBg: C.surface,
+    secondaryText: C.red,
+    sectionBg: C.surface,
+    sectionBorder: C.border,
+    sectionRadius: 18,
+    calendarBg: C.card,
+    recentBg: C.card,
+  },
+  luxe: {
+    id: "luxe",
+    badge: "LUXE",
+    name: "プレミアムジム",
+    note: "Strong寄りの高級感と余白",
+    title: "Performance Deck",
+    shellBg: "linear-gradient(180deg, rgba(215,167,74,.16) 0%, rgba(24,21,16,.98) 38%, rgba(15,14,12,.98) 100%)",
+    shellBorder: "#3e3220",
+    shellShadow: "0 24px 56px rgba(0,0,0,.38)",
+    shellAccent: "#d7a74a",
+    shellTint: "#19150f",
+    heroBg: "rgba(255,255,255,.03)",
+    primaryBg: "linear-gradient(135deg,#f3c66a 0%,#c79228 100%)",
+    primaryText: "#16120d",
+    secondaryBg: "rgba(255,255,255,.03)",
+    secondaryText: "#f1d28c",
+    sectionBg: "rgba(255,255,255,.03)",
+    sectionBorder: "#3a2f21",
+    sectionRadius: 22,
+    calendarBg: "linear-gradient(180deg,#16130f 0%,#11100d 100%)",
+    recentBg: "linear-gradient(180deg,#17140f 0%,#11100d 100%)",
+  },
+  edge: {
+    id: "edge",
+    badge: "EDGE",
+    name: "スポーツテック",
+    note: "近未来UIと発光アクセント",
+    title: "Training OS",
+    shellBg: "radial-gradient(circle at top right, rgba(64,170,160,.18), transparent 28%), radial-gradient(circle at top left, rgba(90,168,220,.15), transparent 24%), #111315",
+    shellBorder: "#26343a",
+    shellShadow: "0 22px 52px rgba(0,0,0,.34)",
+    shellAccent: C.teal,
+    shellTint: "#12181b",
+    heroBg: "rgba(255,255,255,.025)",
+    primaryBg: "linear-gradient(135deg,#4bc5bb 0%,#2b8f87 100%)",
+    primaryText: "#081111",
+    secondaryBg: "rgba(64,170,160,.08)",
+    secondaryText: "#6fe0d7",
+    sectionBg: "#141b1f",
+    sectionBorder: "#233238",
+    sectionRadius: 20,
+    calendarBg: "#12181b",
+    recentBg: "#12181b",
+  },
+};
 
 const compress = (file, px = 900, q = 0.72) =>
   new Promise((res, rej) => {
@@ -230,6 +299,7 @@ export default function App() {
   const [photos, setPh] = useState([]);
   const [custom, setCu] = useState({});
   const [nutri, setNu] = useState({ weight: "", activity: "moderate", bodyWeights: [] });
+  const [ui, setUi] = useState({ homeStyle: "memo" });
   const [selDate, setSel] = useState(today());
   const [ready, setOk] = useState(false);
 
@@ -241,6 +311,7 @@ export default function App() {
       setPh((await sGet(SK.photos)) || []);
       setCu((await sGet(SK.custom)) || {});
       setNu((await sGet(SK.nutri)) || { weight: "", activity: "moderate", bodyWeights: [] });
+      setUi((await sGet(SK.ui)) || { homeStyle: "memo" });
       setOk(true);
     })();
   }, []);
@@ -268,6 +339,10 @@ export default function App() {
   const saveNutri = useCallback(async (n) => {
     setNu(n);
     await sSet(SK.nutri, n);
+  }, []);
+  const saveUi = useCallback(async (n) => {
+    setUi(n);
+    await sSet(SK.ui, n);
   }, []);
 
   const getMG = useCallback((m) => ({ ...MG[m], exs: [...MG[m].exs, ...(custom[m] || [])] }), [custom]);
@@ -300,12 +375,12 @@ export default function App() {
 
   return (
     <div style={{ background: C.bg, minHeight: "100vh", color: C.text, ...typo.body, maxWidth: 430, margin: "0 auto", paddingBottom: 76 }}>
-      {tab === "calendar" && <CalScreen logs={logs} cardio={cardio} photos={photos} wDays={wDays} phDays={phDays} selDate={selDate} setSel={setSel} setTab={setTab} savePhotos={savePhotos} />}
+      {tab === "calendar" && <CalScreen logs={logs} cardio={cardio} photos={photos} wDays={wDays} phDays={phDays} selDate={selDate} setSel={setSel} setTab={setTab} savePhotos={savePhotos} ui={ui} saveUi={saveUi} />}
       {tab === "log" && <LogScreen logs={logs} saveLogs={saveLogs} selDate={selDate} getMG={getMG} addCustomEx={addCustomEx} />}
       {tab === "cardio" && <CardioScreen cardio={cardio} saveCardio={saveCardio} selDate={selDate} />}
       {tab === "photo" && <PhotoScreen photos={photos} savePhotos={savePhotos} selDate={selDate} setSel={setSel} />}
       {tab === "graph" && <GraphScreen logs={logs} cardio={cardio} sleep={sleep} nutri={nutri} />}
-      {tab === "tools" && <ToolsScreen sleep={sleep} saveSleep={saveSleep} nutri={nutri} saveNutri={saveNutri} />}
+      {tab === "tools" && <ToolsScreen sleep={sleep} saveSleep={saveSleep} nutri={nutri} saveNutri={saveNutri} ui={ui} saveUi={saveUi} />}
       <BottomNav tab={tab} setTab={setTab} />
     </div>
   );
@@ -337,12 +412,13 @@ function BottomNav({ tab, setTab }) {
   );
 }
 
-function CalScreen({ logs, cardio, photos, wDays, phDays, selDate, setSel, setTab, savePhotos }) {
+function CalScreen({ logs, cardio, photos, wDays, phDays, selDate, setSel, setTab, savePhotos, ui, saveUi }) {
   const now = new Date();
   const [yr, setYr] = useState(now.getFullYear());
   const [mo, setMo] = useState(now.getMonth());
   const fileRef = useRef(null);
   const [uploading, setUploading] = useState(false);
+  const homeStyle = HOME_STYLES[ui?.homeStyle] || HOME_STYLES.memo;
 
   const movMo = (d) => {
     let m = mo + d;
@@ -436,33 +512,74 @@ function CalScreen({ logs, cardio, photos, wDays, phDays, selDate, setSel, setTa
     e.target.value = "";
   };
 
+  const shellCardStyle = {
+    background: homeStyle.shellBg,
+    border: `1px solid ${homeStyle.shellBorder}`,
+    borderRadius: 26,
+    padding: "14px 14px 14px",
+    marginBottom: 12,
+    boxShadow: homeStyle.shellShadow,
+  };
+  const sectionStyle = {
+    background: homeStyle.sectionBg,
+    border: `1px solid ${homeStyle.sectionBorder}`,
+    borderRadius: homeStyle.sectionRadius,
+  };
+
   return (
     <div className="su">
       <div style={{ padding: "34px 16px 0" }}>
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 24, padding: "14px 14px 14px", marginBottom: 12, boxShadow: `0 18px 44px rgba(0,0,0,.28)` }}>
+        <div style={shellCardStyle}>
+          <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 12, marginBottom: 10 }}>
+            {Object.values(HOME_STYLES).map((style) => {
+              const on = style.id === homeStyle.id;
+              return (
+                <button
+                  key={style.id}
+                  className="tap"
+                  onClick={() => saveUi({ ...(ui || {}), homeStyle: style.id })}
+                  style={{
+                    minWidth: 116,
+                    background: on ? `${style.shellAccent}18` : "transparent",
+                    color: on ? style.shellAccent : C.sub,
+                    border: `1px solid ${on ? `${style.shellAccent}55` : C.border}`,
+                    borderRadius: 16,
+                    padding: "10px 12px",
+                    cursor: "pointer",
+                    textAlign: "left",
+                  }}
+                >
+                  <div style={{ ...typo.label, fontSize: 8, color: on ? style.shellAccent : C.muted, marginBottom: 5, textTransform: "none" }}>{style.badge}</div>
+                  <div style={{ ...typo.bodySemi, fontSize: 13, marginBottom: 2 }}>{style.name}</div>
+                  <div style={{ ...typo.caption, color: C.muted, lineHeight: 1.35 }}>{style.note}</div>
+                </button>
+              );
+            })}
+          </div>
+
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 14 }}>
             <div>
-              <div style={{ ...typo.bodySemi, fontSize: 13, color: C.amber, marginBottom: 4 }}>トレーニングメモ</div>
+              <div style={{ ...typo.bodySemi, fontSize: 13, color: homeStyle.shellAccent, marginBottom: 4 }}>{homeStyle.title}</div>
               <div style={{ ...typo.h1, fontSize: 20, marginBottom: 4 }}>{yr}年 {mo + 1}月のホーム</div>
               <div style={{ ...typo.caption, color: C.sub, marginBottom: 6 }}>次にやるなら {nextPart?.key || "胸"} / 今日 {trainedToday.length ? `${trainedToday.join("・")}` : "未記録"}</div>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                <Chip color={nextPart?.color || C.amber}>休養 {nextPart?.restDays ?? 0}日</Chip>
+                <Chip color={nextPart?.color || homeStyle.shellAccent}>休養 {nextPart?.restDays ?? 0}日</Chip>
                 <Chip color={trainedToday.length ? C.teal : C.orange}>{trainedToday.length ? "実施あり" : "未実施"}</Chip>
               </div>
             </div>
-            <div style={{ minWidth: 82, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, padding: "10px 10px 9px", textAlign: "center" }}>
-              <div style={{ ...typo.statNum, color: C.amber, fontSize: 23, lineHeight: 1 }}>{weekVol}<span style={{ ...typo.caption, color: C.sub, marginLeft: 2 }}>t</span></div>
+            <div style={{ minWidth: 82, background: homeStyle.heroBg, border: `1px solid ${homeStyle.sectionBorder}`, borderRadius: 16, padding: "10px 10px 9px", textAlign: "center", backdropFilter: homeStyle.id === "luxe" ? "blur(12px)" : "none" }}>
+              <div style={{ ...typo.statNum, color: homeStyle.shellAccent, fontSize: 23, lineHeight: 1 }}>{weekVol}<span style={{ ...typo.caption, color: C.sub, marginLeft: 2 }}>t</span></div>
               <div style={{ ...typo.caption, color: C.muted, marginTop: 4 }}>今週</div>
             </div>
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8, marginBottom: 12 }}>
             {[
-              [`${mDays}`, "実施日", C.amber],
+              [`${mDays}`, "実施日", homeStyle.shellAccent],
               [`${mVol}t`, "月間Vol", C.orange],
               [`${focusParts.filter((p) => p.lastDate).length}`, "部位数", C.teal],
             ].map(([v, l, col]) => (
-              <div key={l} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 14, padding: "10px 8px", textAlign: "center" }}>
+              <div key={l} style={{ background: homeStyle.heroBg, border: `1px solid ${homeStyle.sectionBorder}`, borderRadius: 14, padding: "10px 8px", textAlign: "center" }}>
                 <div style={{ ...typo.statNum, color: col, fontSize: 19, marginBottom: 4 }}>{v}</div>
                 <div style={{ ...typo.caption, color: C.muted }}>{l}</div>
               </div>
@@ -470,11 +587,11 @@ function CalScreen({ logs, cardio, photos, wDays, phDays, selDate, setSel, setTa
           </div>
 
           <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-            <button className="tap" onClick={() => setTab("log")} style={{ flex: 1, background: C.amber, color: C.inv, border: "none", borderRadius: 16, padding: "12px 0", ...typo.bodySemi, fontSize: 13, cursor: "pointer" }}>筋トレを記録</button>
-            <button className="tap" onClick={() => setTab("cardio")} style={{ flex: 1, background: C.surface, color: C.red, border: `1px solid ${C.border}`, borderRadius: 16, padding: "12px 0", ...typo.bodySemi, fontSize: 13, cursor: "pointer" }}>有酸素を記録</button>
+            <button className="tap" onClick={() => setTab("log")} style={{ flex: 1, background: homeStyle.primaryBg, color: homeStyle.primaryText, border: "none", borderRadius: 16, padding: "12px 0", ...typo.bodySemi, fontSize: 13, cursor: "pointer", boxShadow: homeStyle.id !== "memo" ? `0 10px 24px ${homeStyle.shellAccent}22` : "none" }}>筋トレを記録</button>
+            <button className="tap" onClick={() => setTab("cardio")} style={{ flex: 1, background: homeStyle.secondaryBg, color: homeStyle.secondaryText, border: `1px solid ${homeStyle.sectionBorder}`, borderRadius: 16, padding: "12px 0", ...typo.bodySemi, fontSize: 13, cursor: "pointer" }}>有酸素を記録</button>
           </div>
 
-          <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 18, padding: "12px 12px 10px", marginBottom: 10 }}>
+          <div style={{ ...sectionStyle, padding: "12px 12px 10px", marginBottom: 10 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
               <div>
                 <div style={{ ...typo.bodySemi, fontSize: 13 }}>部位一覧</div>
@@ -484,7 +601,7 @@ function CalScreen({ logs, cardio, photos, wDays, phDays, selDate, setSel, setTa
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7 }}>
               {focusParts.map((part) => (
-                <button key={part.key} onClick={() => setSel(part.lastDate || today())} className="tap" style={{ background: trainedToday.includes(part.key) ? `${part.color}14` : C.card, border: `1px solid ${trainedToday.includes(part.key) ? `${part.color}45` : C.border}`, borderRadius: 14, padding: "10px 10px 9px", textAlign: "left", cursor: "pointer" }}>
+                <button key={part.key} onClick={() => setSel(part.lastDate || today())} className="tap" style={{ background: trainedToday.includes(part.key) ? `${part.color}14` : homeStyle.shellTint, border: `1px solid ${trainedToday.includes(part.key) ? `${part.color}45` : homeStyle.sectionBorder}`, borderRadius: 14, padding: "10px 10px 9px", textAlign: "left", cursor: "pointer" }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 5 }}>
                     <span style={{ ...typo.bodySemi, fontSize: 13, color: part.color }}>{part.key}</span>
                     <span style={{ ...typo.caption, color: C.muted }}>{part.lastDate ? `${part.restDays}日` : "-"}</span>
@@ -496,7 +613,7 @@ function CalScreen({ logs, cardio, photos, wDays, phDays, selDate, setSel, setTa
             </div>
           </div>
 
-          <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 18, padding: "12px 12px 8px" }}>
+          <div style={{ ...sectionStyle, padding: "12px 12px 8px" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
               <div>
                 <div style={{ ...typo.bodySemi, fontSize: 13 }}>前回メニュー</div>
@@ -537,7 +654,7 @@ function CalScreen({ logs, cardio, photos, wDays, phDays, selDate, setSel, setTa
         </div>
       </div>
 
-      <div style={{ margin: "0 16px 14px", background: C.card, border: `1px solid ${C.border}`, borderRadius: 24, overflow: "hidden", boxShadow: `0 8px 26px rgba(0,0,0,.36)` }}>
+      <div style={{ margin: "0 16px 14px", background: homeStyle.calendarBg, border: `1px solid ${homeStyle.sectionBorder}`, borderRadius: 24, overflow: "hidden", boxShadow: `0 8px 26px rgba(0,0,0,.36)` }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderBottom: `1px solid ${C.border}` }}>
           <button onClick={() => movMo(-1)} className="tap" style={ibStyle}>‹</button>
           <span style={{ ...typo.bodySemi, fontSize: 13 }}>{yr}年 {mo + 1}月</span>
@@ -565,13 +682,13 @@ function CalScreen({ logs, cardio, photos, wDays, phDays, selDate, setSel, setTa
             const isSat = i % 7 === 6;
 
             return (
-              <div key={ds} onClick={() => setSel(ds)} className="tap" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "3px 1px", cursor: "pointer", borderRadius: 10, background: isSel ? `${C.amber}18` : "transparent", transition: "background .1s", position: "relative" }}>
-                {vol > 0 && !isSel && <div style={{ position: "absolute", inset: "3px", borderRadius: 8, background: C.amber, opacity: 0.03 + intensity * 0.1, pointerEvents: "none" }} />}
-                <div style={{ width: 30, height: 30, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", ...typo.body, fontSize: 12, fontWeight: isSel || isT ? FW.bold : FW.normal, background: isSel ? C.amber : "transparent", color: isSel ? C.inv : isSun ? C.red : isSat ? C.blue : C.text, border: isT && !isSel ? `1.5px solid ${C.amber}` : "none", boxShadow: isSel ? `0 0 12px ${C.amber}60` : "none" }}>
+              <div key={ds} onClick={() => setSel(ds)} className="tap" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "3px 1px", cursor: "pointer", borderRadius: 10, background: isSel ? `${homeStyle.shellAccent}18` : "transparent", transition: "background .1s", position: "relative" }}>
+                {vol > 0 && !isSel && <div style={{ position: "absolute", inset: "3px", borderRadius: 8, background: homeStyle.shellAccent, opacity: 0.03 + intensity * 0.1, pointerEvents: "none" }} />}
+                <div style={{ width: 30, height: 30, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", ...typo.body, fontSize: 12, fontWeight: isSel || isT ? FW.bold : FW.normal, background: isSel ? homeStyle.shellAccent : "transparent", color: isSel ? C.inv : isSun ? C.red : isSat ? C.blue : C.text, border: isT && !isSel ? `1.5px solid ${homeStyle.shellAccent}` : "none", boxShadow: isSel ? `0 0 12px ${homeStyle.shellAccent}60` : "none" }}>
                   {day}
                 </div>
                 <div style={{ display: "flex", gap: 2, marginTop: 2, height: 4, alignItems: "center" }}>
-                  {hasW && <div style={{ width: 4, height: 4, borderRadius: 2, background: isSel ? C.inv : C.amber, boxShadow: !isSel ? `0 0 4px ${C.amber}80` : "" }} />}
+                  {hasW && <div style={{ width: 4, height: 4, borderRadius: 2, background: isSel ? C.inv : homeStyle.shellAccent, boxShadow: !isSel ? `0 0 4px ${homeStyle.shellAccent}80` : "" }} />}
                   {hasC && <div style={{ width: 4, height: 4, borderRadius: 2, background: isSel ? C.inv : C.red }} />}
                   {hasP && <div style={{ width: 4, height: 4, borderRadius: "50%", background: isSel ? C.inv : C.orange }} />}
                 </div>
@@ -592,7 +709,7 @@ function CalScreen({ logs, cardio, photos, wDays, phDays, selDate, setSel, setTa
 
       <div style={{ padding: "0 16px" }}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 10, marginBottom: 12 }}>
-          <SCard style={{ padding: 14 }}>
+          <SCard style={{ padding: 14, background: homeStyle.recentBg, border: `1px solid ${homeStyle.sectionBorder}` }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
               <div>
                 <div style={{ ...typo.bodySemi, fontSize: 13, marginBottom: 2 }}>最近の記録</div>
@@ -615,7 +732,7 @@ function CalScreen({ logs, cardio, photos, wDays, phDays, selDate, setSel, setTa
                   </div>
                 )) : <div style={{ ...typo.caption, color: C.muted, paddingTop: 8 }}>まだ記録がありません</div>}
               </div>
-              <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 14, padding: 10 }}>
+              <div style={{ background: homeStyle.heroBg, border: `1px solid ${homeStyle.sectionBorder}`, borderRadius: 14, padding: 10 }}>
                 <div style={{ ...typo.bodySemi, fontSize: 12, marginBottom: 8 }}>効く部位</div>
                 <MuscleMapCard parts={hotParts.length ? hotParts.map((p) => p.key) : ["胸", "脚"]} compact />
               </div>
@@ -1508,7 +1625,7 @@ function BodySilhouette({ side, activeParts, compact = false }) {
   );
 }
 
-function ToolsScreen({ sleep, saveSleep, nutri, saveNutri }) {
+function ToolsScreen({ sleep, saveSleep, nutri, saveNutri, ui, saveUi }) {
   const [sub, setSub] = useState("timer");
   return (
     <div className="su">
@@ -1521,6 +1638,41 @@ function ToolsScreen({ sleep, saveSleep, nutri, saveNutri }) {
         ))}
       </div>
       <div style={{ padding: "14px" }}>
+        <SCard style={{ padding: 14, marginBottom: 14 }}>
+          <div style={{ ...typo.bodySemi, fontSize: 13, marginBottom: 4 }}>デザインプリセット</div>
+          <div style={{ ...typo.caption, color: C.muted, marginBottom: 10 }}>ホーム画面を 3 案から切り替え</div>
+          <div style={{ display: "grid", gap: 8 }}>
+            {Object.values(HOME_STYLES).map((style) => {
+              const on = (ui?.homeStyle || "memo") === style.id;
+              return (
+                <button
+                  key={style.id}
+                  className="tap"
+                  onClick={() => saveUi({ ...(ui || {}), homeStyle: style.id })}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 10,
+                    padding: "11px 12px",
+                    borderRadius: 14,
+                    border: `1px solid ${on ? `${style.shellAccent}55` : C.border}`,
+                    background: on ? `${style.shellAccent}14` : C.surface,
+                    color: C.text,
+                    cursor: "pointer",
+                    textAlign: "left",
+                  }}
+                >
+                  <div>
+                    <div style={{ ...typo.bodySemi, fontSize: 13, color: on ? style.shellAccent : C.text, marginBottom: 2 }}>{style.name}</div>
+                    <div style={{ ...typo.caption, color: C.muted }}>{style.note}</div>
+                  </div>
+                  <Chip color={on ? style.shellAccent : C.muted}>{style.badge}</Chip>
+                </button>
+              );
+            })}
+          </div>
+        </SCard>
         {sub === "timer" && <TimerPanel />}
         {sub === "sleep" && <SleepPanel sleep={sleep} saveSleep={saveSleep} />}
         {sub === "smolov" && <SmolovPanel />}
