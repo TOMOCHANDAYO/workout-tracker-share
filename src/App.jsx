@@ -411,7 +411,18 @@ function CalScreen({ logs, cardio, photos, wDays, phDays, selDate, setSel, setTa
   }).sort((a, b) => b.restDays - a.restDays);
   const nextPart = partStats[0];
   const hotParts = partStats.filter((p) => p.sets30 > 0).slice(0, 4);
-  const recentRecords = logs.slice().sort((a, b) => b.id - a.id).slice(0, 4);
+  const recentRecords = logs.slice().sort((a, b) => b.id - a.id).slice(0, 5);
+  const trainedToday = [...new Set(selLogs.map((l) => l.muscle))];
+  const focusParts = partStats.slice(0, 6);
+  const recentSessions = [...new Set(logs.slice().sort((a, b) => b.id - a.id).map((l) => toDS(l.date)))].slice(0, 3).map((date) => {
+    const dayLogs = logs.filter((l) => toDS(l.date) === date);
+    return {
+      date,
+      parts: [...new Set(dayLogs.map((l) => l.muscle))],
+      volume: dayLogs.reduce((sum, l) => sum + l.weight * l.reps, 0),
+      top: dayLogs[0],
+    };
+  });
 
   const handleFile = async (e) => {
     const f = e.target.files?.[0];
@@ -428,50 +439,100 @@ function CalScreen({ logs, cardio, photos, wDays, phDays, selDate, setSel, setTa
   return (
     <div className="su">
       <div style={{ padding: "34px 16px 0" }}>
-        <div style={{ background: `linear-gradient(180deg, rgba(240,165,0,.10) 0%, rgba(240,165,0,0) 100%), ${C.bg}`, border: `1px solid ${C.border}`, borderRadius: 24, padding: "18px 16px 16px", marginBottom: 14, boxShadow: `0 18px 44px rgba(0,0,0,.34)` }}>
-          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 12 }}>
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 24, padding: "14px 14px 14px", marginBottom: 12, boxShadow: `0 18px 44px rgba(0,0,0,.28)` }}>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 14 }}>
             <div>
-              <div style={{ ...typo.label, color: C.amber, marginBottom: 8, textShadow: `0 0 12px ${C.amber}50` }}>Workout Tracker</div>
-              <div style={{ ...typo.h1, fontSize: 18, marginBottom: 4 }}>今日のトレーニング管理</div>
-              <div style={{ ...typo.caption, color: C.sub }}>{yr}年 {mo + 1}月 / 次に狙う部位は {nextPart?.key || "胸"}</div>
+              <div style={{ ...typo.bodySemi, fontSize: 13, color: C.amber, marginBottom: 4 }}>トレーニングメモ</div>
+              <div style={{ ...typo.h1, fontSize: 20, marginBottom: 4 }}>{yr}年 {mo + 1}月のホーム</div>
+              <div style={{ ...typo.caption, color: C.sub, marginBottom: 6 }}>次にやるなら {nextPart?.key || "胸"} / 今日 {trainedToday.length ? `${trainedToday.join("・")}` : "未記録"}</div>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                <Chip color={nextPart?.color || C.amber}>休養 {nextPart?.restDays ?? 0}日</Chip>
+                <Chip color={trainedToday.length ? C.teal : C.orange}>{trainedToday.length ? "実施あり" : "未実施"}</Chip>
+              </div>
             </div>
-            <div style={{ width: 76, background: `linear-gradient(135deg,${C.card2} 0%,${C.card} 100%)`, border: `1px solid ${C.border2}`, borderRadius: 18, padding: "12px 10px", textAlign: "center" }}>
-              <div style={{ ...typo.statNum, color: C.amber, fontSize: 24, lineHeight: 1 }}>{weekVol}<span style={{ ...typo.caption, color: C.sub, marginLeft: 2 }}>t</span></div>
-              <div style={{ ...typo.caption, color: C.muted, marginTop: 4 }}>今週Vol</div>
+            <div style={{ minWidth: 82, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, padding: "10px 10px 9px", textAlign: "center" }}>
+              <div style={{ ...typo.statNum, color: C.amber, fontSize: 23, lineHeight: 1 }}>{weekVol}<span style={{ ...typo.caption, color: C.sub, marginLeft: 2 }}>t</span></div>
+              <div style={{ ...typo.caption, color: C.muted, marginTop: 4 }}>今週</div>
             </div>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 10 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8, marginBottom: 12 }}>
             {[
-              [`${mDays}日`, `${mo + 1}月の連続日数`, C.amber],
-              [`${mVol}t`, `${mo + 1}月の総ボリューム`, C.orange],
+              [`${mDays}`, "実施日", C.amber],
+              [`${mVol}t`, "月間Vol", C.orange],
+              [`${focusParts.filter((p) => p.lastDate).length}`, "部位数", C.teal],
             ].map(([v, l, col]) => (
-              <div key={l} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: "10px 12px" }}>
-                <div style={{ ...typo.statNum, color: col, fontSize: 20, marginBottom: 4 }}>{v}</div>
+              <div key={l} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 14, padding: "10px 8px", textAlign: "center" }}>
+                <div style={{ ...typo.statNum, color: col, fontSize: 19, marginBottom: 4 }}>{v}</div>
                 <div style={{ ...typo.caption, color: C.muted }}>{l}</div>
               </div>
             ))}
           </div>
 
-          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: "12px 12px 10px" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+          <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+            <button className="tap" onClick={() => setTab("log")} style={{ flex: 1, background: C.amber, color: C.inv, border: "none", borderRadius: 16, padding: "12px 0", ...typo.bodySemi, fontSize: 13, cursor: "pointer" }}>筋トレを記録</button>
+            <button className="tap" onClick={() => setTab("cardio")} style={{ flex: 1, background: C.surface, color: C.red, border: `1px solid ${C.border}`, borderRadius: 16, padding: "12px 0", ...typo.bodySemi, fontSize: 13, cursor: "pointer" }}>有酸素を記録</button>
+          </div>
+
+          <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 18, padding: "12px 12px 10px", marginBottom: 10 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
               <div>
-                <div style={{ ...typo.bodySemi, fontSize: 13 }}>部位コンディション</div>
-                <div style={{ ...typo.caption, color: C.muted }}>筋トレMEMOっぽく部位ごとの回復を一覧化</div>
+                <div style={{ ...typo.bodySemi, fontSize: 13 }}>部位一覧</div>
+                <div style={{ ...typo.caption, color: C.muted }}>前回日と休養日をすぐ確認</div>
               </div>
               {nextPart?.lastDate && <Chip color={nextPart.color}>最優先 {nextPart.key}</Chip>}
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-              {partStats.slice(0, 4).map((part) => (
-                <div key={part.key} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: "10px 10px 9px" }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-                    <span style={{ ...typo.bodySemi, fontSize: 12, color: part.color }}>{part.key}</span>
-                    <span style={{ ...typo.caption, color: C.muted }}>{part.lastDate ? `${part.restDays}日休み` : "未記録"}</span>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7 }}>
+              {focusParts.map((part) => (
+                <button key={part.key} onClick={() => setSel(part.lastDate || today())} className="tap" style={{ background: trainedToday.includes(part.key) ? `${part.color}14` : C.card, border: `1px solid ${trainedToday.includes(part.key) ? `${part.color}45` : C.border}`, borderRadius: 14, padding: "10px 10px 9px", textAlign: "left", cursor: "pointer" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 5 }}>
+                    <span style={{ ...typo.bodySemi, fontSize: 13, color: part.color }}>{part.key}</span>
+                    <span style={{ ...typo.caption, color: C.muted }}>{part.lastDate ? `${part.restDays}日` : "-"}</span>
                   </div>
-                  <div style={{ ...typo.caption, color: C.sub }}>{part.sets30}set / 30日</div>
-                </div>
+                  <div style={{ ...typo.caption, color: C.sub, marginBottom: 3 }}>{part.lastDate ? `前回 ${jpd(part.lastDate)}` : "前回記録なし"}</div>
+                  <div style={{ ...typo.caption, color: C.muted }}>{part.sets30}set / 30日</div>
+                </button>
               ))}
             </div>
+          </div>
+
+          <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 18, padding: "12px 12px 8px" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+              <div>
+                <div style={{ ...typo.bodySemi, fontSize: 13 }}>前回メニュー</div>
+                <div style={{ ...typo.caption, color: C.muted }}>直近の重量と回数をすぐ確認</div>
+              </div>
+              <Chip color={C.amber}>{recentRecords.length}種目</Chip>
+            </div>
+            {recentRecords.length ? recentRecords.map((record, idx) => (
+              <button
+                key={record.id}
+                className="tap"
+                onClick={() => setSel(toDS(record.date))}
+                style={{
+                  width: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 10,
+                  background: "transparent",
+                  border: "none",
+                  borderTop: idx === 0 ? "none" : `1px solid ${C.border}`,
+                  padding: idx === 0 ? "0 0 10px" : "10px 0",
+                  textAlign: "left",
+                  cursor: "pointer",
+                }}
+              >
+                <div>
+                  <div style={{ ...typo.bodySemi, fontSize: 13, color: MG[record.muscle]?.color || C.text, marginBottom: 2 }}>{record.exercise}</div>
+                  <div style={{ ...typo.caption, color: C.muted }}>{record.muscle} / {jpd(toDS(record.date))}</div>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ ...typo.bodySemi, fontSize: 13, color: C.sub }}>{record.weight}kg × {record.reps}</div>
+                  <div style={{ ...typo.caption, color: C.muted }}>{ago(toDS(record.date))}</div>
+                </div>
+              </button>
+            )) : <div style={{ ...typo.caption, color: C.muted }}>まだ種目記録がありません</div>}
           </div>
         </div>
       </div>
@@ -530,26 +591,34 @@ function CalScreen({ logs, cardio, photos, wDays, phDays, selDate, setSel, setTa
       </div>
 
       <div style={{ padding: "0 16px" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr", gap: 10, marginBottom: 12 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 10, marginBottom: 12 }}>
           <SCard style={{ padding: 14 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
               <div>
-                <div style={{ ...typo.bodySemi, fontSize: 13, marginBottom: 2 }}>効く部位マップ</div>
-                <div style={{ ...typo.caption, color: C.muted }}>記録が多い部位を発光表示</div>
+                <div style={{ ...typo.bodySemi, fontSize: 13, marginBottom: 2 }}>最近の記録</div>
+                <div style={{ ...typo.caption, color: C.muted }}>直近のトレーニングを一覧表示</div>
               </div>
-              <Chip color={nextPart?.color || C.amber}>{nextPart?.key || "胸"}</Chip>
+              <Chip color={nextPart?.color || C.amber}>{recentSessions.length}件</Chip>
             </div>
-            <MuscleMapCard parts={hotParts.length ? hotParts.map((p) => p.key) : ["胸", "脚"]} compact />
-          </SCard>
-          <SCard style={{ padding: 14 }}>
-            <div style={{ ...typo.bodySemi, fontSize: 13, marginBottom: 8 }}>最近の種目</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {recentRecords.length ? recentRecords.map((item) => (
-                <div key={item.id} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: "9px 10px" }}>
-                  <div style={{ ...typo.bodySemi, fontSize: 12, color: MG[item.muscle]?.color || C.amber, marginBottom: 3 }}>{item.exercise}</div>
-                  <div style={{ ...typo.caption, color: C.muted }}>{item.weight}kg × {item.reps}rep</div>
-                </div>
-              )) : <div style={{ ...typo.caption, color: C.muted, paddingTop: 8 }}>まだ記録がありません</div>}
+            <div style={{ display: "grid", gridTemplateColumns: "1.1fr .9fr", gap: 10 }}>
+              <div>
+                {recentSessions.length ? recentSessions.map((session, idx) => (
+                  <div key={session.date} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: idx < recentSessions.length - 1 ? "0 0 10px" : "0", marginBottom: idx < recentSessions.length - 1 ? 10 : 0, borderBottom: idx < recentSessions.length - 1 ? `1px solid ${C.border}` : "none" }}>
+                    <div>
+                      <div style={{ ...typo.bodySemi, fontSize: 13, marginBottom: 3 }}>{jpd(session.date)}</div>
+                      <div style={{ ...typo.caption, color: C.muted }}>{session.parts.join("・")} / {session.top?.exercise || "種目なし"}</div>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ ...typo.bodySemi, fontSize: 12, color: C.amber }}>{Math.round(session.volume)}kg</div>
+                      <div style={{ ...typo.caption, color: C.muted }}>{ago(session.date)}</div>
+                    </div>
+                  </div>
+                )) : <div style={{ ...typo.caption, color: C.muted, paddingTop: 8 }}>まだ記録がありません</div>}
+              </div>
+              <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 14, padding: 10 }}>
+                <div style={{ ...typo.bodySemi, fontSize: 12, marginBottom: 8 }}>効く部位</div>
+                <MuscleMapCard parts={hotParts.length ? hotParts.map((p) => p.key) : ["胸", "脚"]} compact />
+              </div>
             </div>
           </SCard>
         </div>
@@ -559,10 +628,7 @@ function CalScreen({ logs, cardio, photos, wDays, phDays, selDate, setSel, setTa
             <span style={{ ...typo.bodySemi, fontSize: 15 }}>{selDO.getMonth() + 1}月{selDO.getDate()}日（{WDAYS[selDO.getDay()]}）</span>
             {isToday && <span style={{ ...typo.label, fontSize: 8, color: C.amber, background: C.amberG, border: `1px solid ${C.amber}40`, borderRadius: 6, padding: "2px 8px", textShadow: `0 0 8px ${C.amber}60` }}>TODAY</span>}
           </div>
-          <div style={{ display: "flex", gap: 7 }}>
-            <button className="tap" onClick={() => setTab("log")} style={{ background: `linear-gradient(135deg,${C.amber} 0%,${C.amberD} 100%)`, color: C.inv, border: "none", borderRadius: 18, padding: "7px 14px", ...typo.bodySemi, fontSize: 12, cursor: "pointer", boxShadow: `0 0 14px ${C.amber}40` }}>＋ 筋トレ</button>
-            <button className="tap" onClick={() => setTab("cardio")} style={{ background: C.card, color: C.red, border: `1px solid ${C.red}50`, borderRadius: 18, padding: "7px 14px", ...typo.bodySemi, fontSize: 12, cursor: "pointer" }}>＋ 有酸素</button>
-          </div>
+          <button className="tap" onClick={() => setTab("log")} style={{ background: C.surface, color: C.amber, border: `1px solid ${C.border}`, borderRadius: 16, padding: "7px 12px", ...typo.bodySemi, fontSize: 12, cursor: "pointer" }}>種目を追加</button>
         </div>
 
         {selLogs.length > 0 && (
