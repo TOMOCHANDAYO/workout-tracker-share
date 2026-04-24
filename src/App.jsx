@@ -78,6 +78,16 @@ const MG = {
 
 const ALL_MG = Object.keys(MG);
 
+const MG_DETAIL = {
+  胸: { jp: "大胸筋", note: "押す種目の主役", front: true, back: false, short: "PUSH" },
+  背中: { jp: "広背筋", note: "引く種目の主役", front: false, back: true, short: "PULL" },
+  肩: { jp: "三角筋", note: "プレスとレイズ", front: true, back: true, short: "DELT" },
+  脚: { jp: "大腿四頭筋 / ハム", note: "下半身全体", front: true, back: true, short: "LEGS" },
+  腕: { jp: "上腕二頭筋 / 三頭筋", note: "補助種目で積む", front: true, back: true, short: "ARMS" },
+  腹: { jp: "腹直筋", note: "体幹の安定", front: true, back: false, short: "CORE" },
+  全身: { jp: "全身連動", note: "高強度コンパウンド", front: true, back: true, short: "FULL" },
+};
+
 const CARDIO = [
   { name: "ランニング", icon: "▶", color: C.red, hasDist: true },
   { name: "ウォーキング", icon: "◆", color: C.orange, hasDist: true },
@@ -122,6 +132,7 @@ const jpd = (ds) => {
   const d = new Date(`${ds}T00:00:00`);
   return `${d.getMonth() + 1}月${d.getDate()}日`;
 };
+const daysSince = (ds) => Math.floor((Date.now() - new Date(`${ds}T00:00:00`).getTime()) / 86400000);
 
 const readStorage = (k) => {
   try {
@@ -301,24 +312,24 @@ export default function App() {
 }
 
 const NAVS = [
-  { id: "calendar", sym: "▦", lbl: "カレンダー" },
-  { id: "log", sym: "✦", lbl: "筋トレ" },
-  { id: "cardio", sym: "◎", lbl: "有酸素" },
-  { id: "photo", sym: "⬡", lbl: "フォト" },
-  { id: "graph", sym: "▲", lbl: "グラフ" },
-  { id: "tools", sym: "⚙", lbl: "ツール" },
+  { id: "calendar", sym: "◫", lbl: "ホーム" },
+  { id: "log", sym: "✦", lbl: "記録" },
+  { id: "cardio", sym: "◌", lbl: "有酸素" },
+  { id: "photo", sym: "◈", lbl: "フォト" },
+  { id: "graph", sym: "▣", lbl: "分析" },
+  { id: "tools", sym: "◎", lbl: "ツール" },
 ];
 
 function BottomNav({ tab, setTab }) {
   return (
-    <nav style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 430, background: `${C.bg}f5`, borderTop: `1px solid ${C.border}`, display: "flex", zIndex: 200, backdropFilter: "blur(20px)" }}>
+    <nav style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 430, background: "rgba(10,9,7,.94)", borderTop: `1px solid ${C.border}`, display: "flex", zIndex: 200, backdropFilter: "blur(24px)", boxShadow: "0 -10px 30px rgba(0,0,0,.35)" }}>
       {NAVS.map((n) => {
         const on = n.id === tab;
         return (
-          <button key={n.id} onClick={() => setTab(n.id)} className="tap" style={{ flex: 1, background: "none", border: "none", padding: "10px 0 14px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, position: "relative" }}>
-            <span style={{ fontSize: 14, color: on ? C.amber : C.muted, transition: "color .15s" }}>{n.sym}</span>
-            <span style={{ ...typo.label, fontSize: 8, color: on ? C.amber : C.muted, transition: "color .15s", textTransform: "none", letterSpacing: ".01em" }}>{n.lbl}</span>
-            {on && <span style={{ position: "absolute", bottom: 6, width: 20, height: 2, borderRadius: 1, background: C.amber, boxShadow: `0 0 8px ${C.amber}80` }} />}
+          <button key={n.id} onClick={() => setTab(n.id)} className="tap" style={{ flex: 1, background: "none", border: "none", padding: "9px 0 12px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, position: "relative" }}>
+            <span style={{ width: 28, height: 28, borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, color: on ? C.inv : C.muted, background: on ? `linear-gradient(135deg,${C.amber} 0%,${C.amberD} 100%)` : "transparent", border: on ? "none" : `1px solid transparent`, transition: "all .15s", boxShadow: on ? `0 0 14px ${C.amber}50` : "none" }}>{n.sym}</span>
+            <span style={{ ...typo.label, fontSize: 8, color: on ? C.text : C.muted, transition: "color .15s", textTransform: "none", letterSpacing: ".01em" }}>{n.lbl}</span>
+            {on && <span style={{ position: "absolute", top: 2, width: 4, height: 4, borderRadius: "50%", background: C.amber }} />}
           </button>
         );
       })}
@@ -387,6 +398,20 @@ function CalScreen({ logs, cardio, photos, wDays, phDays, selDate, setSel, setTa
   const dayReps = selLogs.reduce((s, l) => s + l.reps, 0);
   const dayVol = selLogs.reduce((s, l) => s + l.weight * l.reps, 0);
   const selDO = new Date(`${selDate}T00:00:00`);
+  const partStats = ALL_MG.map((key) => {
+    const items = logs.filter((l) => l.muscle === key);
+    const lastDate = items.length ? toDS(items.sort((a, b) => b.id - a.id)[0].date) : null;
+    return {
+      key,
+      color: MG[key].color,
+      sets30: items.filter((l) => daysSince(toDS(l.date)) <= 30).length,
+      lastDate,
+      restDays: lastDate ? daysSince(lastDate) : 999,
+    };
+  }).sort((a, b) => b.restDays - a.restDays);
+  const nextPart = partStats[0];
+  const hotParts = partStats.filter((p) => p.sets30 > 0).slice(0, 4);
+  const recentRecords = logs.slice().sort((a, b) => b.id - a.id).slice(0, 4);
 
   const handleFile = async (e) => {
     const f = e.target.files?.[0];
@@ -402,32 +427,56 @@ function CalScreen({ logs, cardio, photos, wDays, phDays, selDate, setSel, setTa
 
   return (
     <div className="su">
-      <div style={{ padding: "48px 20px 0" }}>
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 18 }}>
-          <div>
-            <div style={{ ...typo.label, color: C.amber, marginBottom: 6, textShadow: `0 0 12px ${C.amber}60` }}>Workout Tracker</div>
-            <div style={{ ...typo.h1, fontSize: 22 }}>{yr}年 {mo + 1}月</div>
-          </div>
-          <div style={{ background: `linear-gradient(135deg,${C.card2} 0%,${C.card} 100%)`, border: `1px solid ${C.border2}`, borderRadius: 16, padding: "11px 16px", textAlign: "right", boxShadow: `0 0 24px ${C.glow}` }}>
-            <div style={{ ...typo.statNum, color: C.amber, lineHeight: 1, textShadow: `0 0 20px ${C.amber}50` }}>
-              {weekVol}
-              <span style={{ ...typo.caption, color: C.sub, marginLeft: 3 }}>t</span>
+      <div style={{ padding: "34px 16px 0" }}>
+        <div style={{ background: `linear-gradient(180deg, rgba(240,165,0,.10) 0%, rgba(240,165,0,0) 100%), ${C.bg}`, border: `1px solid ${C.border}`, borderRadius: 24, padding: "18px 16px 16px", marginBottom: 14, boxShadow: `0 18px 44px rgba(0,0,0,.34)` }}>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 12 }}>
+            <div>
+              <div style={{ ...typo.label, color: C.amber, marginBottom: 8, textShadow: `0 0 12px ${C.amber}50` }}>Workout Tracker</div>
+              <div style={{ ...typo.h1, fontSize: 18, marginBottom: 4 }}>今日のトレーニング管理</div>
+              <div style={{ ...typo.caption, color: C.sub }}>{yr}年 {mo + 1}月 / 次に狙う部位は {nextPart?.key || "胸"}</div>
             </div>
-            <div style={{ ...typo.label, color: C.muted, marginTop: 4, textTransform: "none", letterSpacing: ".04em" }}>今週のVol</div>
+            <div style={{ width: 76, background: `linear-gradient(135deg,${C.card2} 0%,${C.card} 100%)`, border: `1px solid ${C.border2}`, borderRadius: 18, padding: "12px 10px", textAlign: "center" }}>
+              <div style={{ ...typo.statNum, color: C.amber, fontSize: 24, lineHeight: 1 }}>{weekVol}<span style={{ ...typo.caption, color: C.sub, marginLeft: 2 }}>t</span></div>
+              <div style={{ ...typo.caption, color: C.muted, marginTop: 4 }}>今週Vol</div>
+            </div>
           </div>
-        </div>
 
-        <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-          {[[`${mDays}日`, `${mo + 1}月の連続日数`], [`${mVol}t`, `${mo + 1}月の総ボリューム`]].map(([v, l]) => (
-            <div key={l} style={{ flex: 1, background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: "10px 14px", display: "flex", alignItems: "baseline", gap: 8 }}>
-              <span style={{ ...typo.statNum, color: C.amber, fontSize: 18 }}>{v}</span>
-              <span style={{ ...typo.caption, color: C.muted }}>{l}</span>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 10 }}>
+            {[
+              [`${mDays}日`, `${mo + 1}月の連続日数`, C.amber],
+              [`${mVol}t`, `${mo + 1}月の総ボリューム`, C.orange],
+            ].map(([v, l, col]) => (
+              <div key={l} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: "10px 12px" }}>
+                <div style={{ ...typo.statNum, color: col, fontSize: 20, marginBottom: 4 }}>{v}</div>
+                <div style={{ ...typo.caption, color: C.muted }}>{l}</div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: "12px 12px 10px" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+              <div>
+                <div style={{ ...typo.bodySemi, fontSize: 13 }}>部位コンディション</div>
+                <div style={{ ...typo.caption, color: C.muted }}>筋トレMEMOっぽく部位ごとの回復を一覧化</div>
+              </div>
+              {nextPart?.lastDate && <Chip color={nextPart.color}>最優先 {nextPart.key}</Chip>}
             </div>
-          ))}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+              {partStats.slice(0, 4).map((part) => (
+                <div key={part.key} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: "10px 10px 9px" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                    <span style={{ ...typo.bodySemi, fontSize: 12, color: part.color }}>{part.key}</span>
+                    <span style={{ ...typo.caption, color: C.muted }}>{part.lastDate ? `${part.restDays}日休み` : "未記録"}</span>
+                  </div>
+                  <div style={{ ...typo.caption, color: C.sub }}>{part.sets30}set / 30日</div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 
-      <div style={{ margin: "0 14px 14px", background: C.card, border: `1px solid ${C.border}`, borderRadius: 20, overflow: "hidden", boxShadow: `0 4px 24px rgba(0,0,0,.4)` }}>
+      <div style={{ margin: "0 16px 14px", background: C.card, border: `1px solid ${C.border}`, borderRadius: 24, overflow: "hidden", boxShadow: `0 8px 26px rgba(0,0,0,.36)` }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderBottom: `1px solid ${C.border}` }}>
           <button onClick={() => movMo(-1)} className="tap" style={ibStyle}>‹</button>
           <span style={{ ...typo.bodySemi, fontSize: 13 }}>{yr}年 {mo + 1}月</span>
@@ -480,7 +529,31 @@ function CalScreen({ logs, cardio, photos, wDays, phDays, selDate, setSel, setTa
         </div>
       </div>
 
-      <div style={{ padding: "0 14px" }}>
+      <div style={{ padding: "0 16px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr", gap: 10, marginBottom: 12 }}>
+          <SCard style={{ padding: 14 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+              <div>
+                <div style={{ ...typo.bodySemi, fontSize: 13, marginBottom: 2 }}>効く部位マップ</div>
+                <div style={{ ...typo.caption, color: C.muted }}>記録が多い部位を発光表示</div>
+              </div>
+              <Chip color={nextPart?.color || C.amber}>{nextPart?.key || "胸"}</Chip>
+            </div>
+            <MuscleMapCard parts={hotParts.length ? hotParts.map((p) => p.key) : ["胸", "脚"]} compact />
+          </SCard>
+          <SCard style={{ padding: 14 }}>
+            <div style={{ ...typo.bodySemi, fontSize: 13, marginBottom: 8 }}>最近の種目</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {recentRecords.length ? recentRecords.map((item) => (
+                <div key={item.id} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: "9px 10px" }}>
+                  <div style={{ ...typo.bodySemi, fontSize: 12, color: MG[item.muscle]?.color || C.amber, marginBottom: 3 }}>{item.exercise}</div>
+                  <div style={{ ...typo.caption, color: C.muted }}>{item.weight}kg × {item.reps}rep</div>
+                </div>
+              )) : <div style={{ ...typo.caption, color: C.muted, paddingTop: 8 }}>まだ記録がありません</div>}
+            </div>
+          </SCard>
+        </div>
+
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span style={{ ...typo.bodySemi, fontSize: 15 }}>{selDO.getMonth() + 1}月{selDO.getDate()}日（{WDAYS[selDO.getDay()]}）</span>
@@ -539,7 +612,7 @@ function CalScreen({ logs, cardio, photos, wDays, phDays, selDate, setSel, setTa
           <div style={{ background: C.card, border: `1.5px dashed ${C.border2}`, borderRadius: 18, padding: "32px 20px", textAlign: "center", marginBottom: 12 }}>
             <div style={{ fontSize: 28, marginBottom: 10, opacity: 0.35 }}>🏋</div>
             <div style={{ ...typo.bodyMed, color: C.sub, marginBottom: 6 }}>この日の記録なし</div>
-            <div style={{ ...typo.caption, color: C.muted }}>「＋ 筋トレ」ボタンから今日の記録を始めよう</div>
+            <div style={{ ...typo.caption, color: C.muted }}>筋トレMEMO風に、まずは部位か種目を選んで1セット目を残そう</div>
           </div>
         )}
 
@@ -1099,14 +1172,17 @@ function PhotoScreen({ photos, savePhotos, selDate, setSel }) {
 function GraphScreen({ logs, cardio, sleep, nutri }) {
   const usedEx = [...new Set(logs.map((l) => l.exercise))];
   const [fEx, setFEx] = useState(usedEx[0] || "ベンチプレス");
-  const [mode, setMode] = useState("weight");
+  const [mode, setMode] = useState("overview");
+  const [bodySide, setBodySide] = useState("front");
   const lmg = Object.entries(MG).find(([, v]) => v.exs.includes(fEx));
   const lCol = lmg ? lmg[1].color : C.amber;
   const wbd = {};
   logs.filter((l) => l.exercise === fEx).forEach((l) => {
     const ds = toDS(l.date);
-    if (!wbd[ds] || l.weight > wbd[ds].最大重量) wbd[ds] = { date: ds, 最大重量: l.weight, ボリューム: 0 };
+    if (!wbd[ds] || l.weight > wbd[ds].最大重量) wbd[ds] = { date: ds, 最大重量: l.weight, ボリューム: 0, 推定1RM: 0, セット数: 0 };
     wbd[ds].ボリューム += l.weight * l.reps;
+    wbd[ds].推定1RM = Math.max(wbd[ds].推定1RM || 0, epley(l.weight, l.reps));
+    wbd[ds].セット数 += 1;
   });
   const weightD = Object.values(wbd).sort((a, b) => a.date.localeCompare(b.date)).slice(-20).map((d) => ({ ...d, date: fmt(d.date) }));
   const cardioD = [...cardio].sort((a, b) => a.id - b.id).slice(-14).map((c) => ({ date: fmt(c.date), 時間: c.duration }));
@@ -1114,12 +1190,25 @@ function GraphScreen({ logs, cardio, sleep, nutri }) {
   const bwD = (nutri.bodyWeights || []).sort((a, b) => a.date.localeCompare(b.date)).slice(-20).map((b) => ({ date: fmt(`${b.date}T12:00:00`), 体重: b.weight }));
   const tt = { contentStyle: { background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, ...typo.caption, color: C.text } };
   const totalVol = logs.reduce((s, l) => s + l.weight * l.reps, 0);
+  const prs = logs.reduce((acc, l) => {
+    acc[l.exercise] = Math.max(acc[l.exercise] || 0, epley(l.weight, l.reps));
+    return acc;
+  }, {});
+  const topPrs = Object.entries(prs)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5);
+  const partLoad = ALL_MG.map((m) => ({
+    key: m,
+    sets: logs.filter((l) => l.muscle === m).length,
+    last: logs.filter((l) => l.muscle === m).sort((a, b) => b.id - a.id)[0],
+  })).filter((m) => m.sets > 0).sort((a, b) => b.sets - a.sets);
+  const activeParts = partLoad.slice(0, 4).map((p) => p.key);
 
   return (
-    <div className="su" style={{ padding: "48px 14px 0" }}>
-      <div style={{ padding: "0 6px 16px" }}>
-        <div style={{ ...typo.label, color: C.amber, marginBottom: 6 }}>Analytics</div>
-        <h1 style={typo.h1}>グラフ</h1>
+    <div className="su" style={{ padding: "34px 14px 0" }}>
+      <div style={{ padding: "0 6px 14px" }}>
+        <div style={{ ...typo.label, color: C.amber, marginBottom: 6 }}>Strong style analytics</div>
+        <h1 style={typo.h1}>分析</h1>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 16 }}>
         {[["総セット", logs.length, "sets"], ["有酸素", cardio.length, "回"], ["累計Vol", `${Math.round((totalVol / 1000) * 10) / 10}`, "t"]].map(([l, v, u]) => (
@@ -1130,10 +1219,33 @@ function GraphScreen({ logs, cardio, sleep, nutri }) {
         ))}
       </div>
       <div style={{ display: "flex", gap: 4, background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: 3, marginBottom: 14 }}>
-        {[["weight", "筋トレ"], ["cardio", "有酸素"], ["sleep", "睡眠"], ["body", "体重"]].map(([m, l]) => (
+        {[["overview", "概要"], ["weight", "筋トレ"], ["bodymap", "部位"], ["body", "体重"]].map(([m, l]) => (
           <button key={m} onClick={() => setMode(m)} style={{ flex: 1, padding: "8px 0", borderRadius: 10, border: "none", background: mode === m ? C.surface : "transparent", color: mode === m ? C.amber : C.muted, ...typo.caption, fontSize: 11, fontWeight: mode === m ? FW.semibold : FW.normal, cursor: "pointer", transition: "all .15s" }}>{l}</button>
         ))}
       </div>
+      {mode === "overview" && (
+        <>
+          <GCard title="ハイライト" sub="筋トレMEMOの一覧性 + Strongの分析感">
+            <div style={{ display: "grid", gridTemplateColumns: "1.1fr 1fr", gap: 10, padding: "0 8px 8px" }}>
+              <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 14, padding: 12 }}>
+                <div style={{ ...typo.bodySemi, fontSize: 12, marginBottom: 6 }}>よく鍛えている部位</div>
+                <MuscleMapCard parts={activeParts.length ? activeParts : ["胸", "脚"]} side={bodySide} onSideChange={setBodySide} compact />
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {topPrs.length ? topPrs.slice(0, 3).map(([exName, pr]) => (
+                  <div key={exName} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: "10px 11px" }}>
+                    <div style={{ ...typo.caption, color: C.muted, marginBottom: 4 }}>推定1RM</div>
+                    <div style={{ ...typo.bodySemi, fontSize: 12 }}>{exName}</div>
+                    <div style={{ ...typo.statNum, fontSize: 20, color: C.amber, marginTop: 4 }}>{Math.round(pr)}<span style={{ ...typo.caption, color: C.muted, marginLeft: 3 }}>kg</span></div>
+                  </div>
+                )) : <Empty text="まずは数セット記録すると分析が出ます" />}
+              </div>
+            </div>
+          </GCard>
+          {cardioD.length >= 2 && <GCard title="有酸素（分）"><ResponsiveContainer width="100%" height={150}><BarChart data={cardioD} margin={{ left: -12, right: 8, top: 4, bottom: 0 }}><CartesianGrid strokeDasharray="3 3" stroke={C.border} vertical={false} /><XAxis dataKey="date" tick={{ fill: C.muted, fontSize: 9 }} axisLine={false} tickLine={false} /><YAxis tick={{ fill: C.muted, fontSize: 9 }} axisLine={false} tickLine={false} /><Tooltip {...tt} /><Bar dataKey="時間" fill={C.red} radius={[4, 4, 0, 0]} opacity={0.88} /></BarChart></ResponsiveContainer></GCard>}
+          {sleepD.length >= 2 && <GCard title="睡眠時間（h）"><ResponsiveContainer width="100%" height={150}><LineChart data={sleepD} margin={{ left: -12, right: 8, top: 4, bottom: 0 }}><CartesianGrid strokeDasharray="3 3" stroke={C.border} /><XAxis dataKey="date" tick={{ fill: C.muted, fontSize: 9 }} axisLine={false} tickLine={false} /><YAxis domain={[0, 10]} tick={{ fill: C.muted, fontSize: 9 }} axisLine={false} tickLine={false} /><Tooltip {...tt} /><Line type="monotone" dataKey="睡眠" stroke={C.purple} strokeWidth={2.5} dot={{ fill: C.purple, r: 3, strokeWidth: 0 }} activeDot={{ r: 5 }} /></LineChart></ResponsiveContainer></GCard>}
+        </>
+      )}
       {mode === "weight" && (
         <>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
@@ -1160,6 +1272,17 @@ function GraphScreen({ logs, cardio, sleep, nutri }) {
                   </ComposedChart>
                 </ResponsiveContainer>
               </GCard>
+              <GCard title="推定1RM" sub={`${fEx} — rep数から自動計算`}>
+                <ResponsiveContainer width="100%" height={140}>
+                  <LineChart data={weightD} margin={{ left: -12, right: 8, top: 4, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
+                    <XAxis dataKey="date" tick={{ fill: C.muted, fontSize: 9 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fill: C.muted, fontSize: 9 }} axisLine={false} tickLine={false} />
+                    <Tooltip {...tt} />
+                    <Line type="monotone" dataKey="推定1RM" stroke={C.amber} strokeWidth={2.5} dot={{ fill: C.amber, r: 3, strokeWidth: 0 }} activeDot={{ r: 5 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </GCard>
               <GCard title="日別ボリューム" sub={fEx}>
                 <ResponsiveContainer width="100%" height={140}>
                   <BarChart data={weightD} margin={{ left: -12, right: 8, top: 4, bottom: 0 }}>
@@ -1171,12 +1294,44 @@ function GraphScreen({ logs, cardio, sleep, nutri }) {
                   </BarChart>
                 </ResponsiveContainer>
               </GCard>
+              <GCard title="セット数推移" sub={fEx}>
+                <ResponsiveContainer width="100%" height={130}>
+                  <BarChart data={weightD} margin={{ left: -12, right: 8, top: 4, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={C.border} vertical={false} />
+                    <XAxis dataKey="date" tick={{ fill: C.muted, fontSize: 9 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fill: C.muted, fontSize: 9 }} axisLine={false} tickLine={false} />
+                    <Tooltip {...tt} />
+                    <Bar dataKey="セット数" fill={lCol} radius={[4, 4, 0, 0]} opacity={0.88} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </GCard>
             </>
           )}
         </>
       )}
-      {mode === "cardio" && (cardioD.length < 2 ? <Empty /> : <GCard title="有酸素（分）"><ResponsiveContainer width="100%" height={150}><BarChart data={cardioD} margin={{ left: -12, right: 8, top: 4, bottom: 0 }}><CartesianGrid strokeDasharray="3 3" stroke={C.border} vertical={false} /><XAxis dataKey="date" tick={{ fill: C.muted, fontSize: 9 }} axisLine={false} tickLine={false} /><YAxis tick={{ fill: C.muted, fontSize: 9 }} axisLine={false} tickLine={false} /><Tooltip {...tt} /><Bar dataKey="時間" fill={C.red} radius={[4, 4, 0, 0]} opacity={0.88} /></BarChart></ResponsiveContainer></GCard>)}
-      {mode === "sleep" && (sleepD.length < 2 ? <Empty /> : <GCard title="睡眠時間（h）"><ResponsiveContainer width="100%" height={150}><LineChart data={sleepD} margin={{ left: -12, right: 8, top: 4, bottom: 0 }}><CartesianGrid strokeDasharray="3 3" stroke={C.border} /><XAxis dataKey="date" tick={{ fill: C.muted, fontSize: 9 }} axisLine={false} tickLine={false} /><YAxis domain={[0, 10]} tick={{ fill: C.muted, fontSize: 9 }} axisLine={false} tickLine={false} /><Tooltip {...tt} /><Line type="monotone" dataKey="睡眠" stroke={C.purple} strokeWidth={2.5} dot={{ fill: C.purple, r: 3, strokeWidth: 0 }} activeDot={{ r: 5 }} /></LineChart></ResponsiveContainer></GCard>)}
+      {mode === "bodymap" && (
+        <>
+          <GCard title="効く部位マップ" sub="Strongの分析情報を部位表示に寄せたビュー">
+            <div style={{ padding: "0 8px 10px" }}>
+              <MuscleMapCard parts={activeParts.length ? activeParts : ["胸", "背中"]} side={bodySide} onSideChange={setBodySide} />
+            </div>
+          </GCard>
+          <SCard style={{ marginBottom: 10 }}>
+            {partLoad.length ? partLoad.map((part, idx) => (
+              <div key={part.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", borderBottom: idx < partLoad.length - 1 ? `1px solid ${C.border}` : "none" }}>
+                <div>
+                  <div style={{ ...typo.bodySemi, fontSize: 13, color: MG[part.key].color }}>{part.key}</div>
+                  <div style={{ ...typo.caption, color: C.muted }}>{MG_DETAIL[part.key].jp} / {part.last ? `${ago(toDS(part.last.date))}` : "未記録"}</div>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ ...typo.statNum, fontSize: 18, color: MG[part.key].color }}>{part.sets}</div>
+                  <div style={{ ...typo.caption, color: C.muted }}>total sets</div>
+                </div>
+              </div>
+            )) : <div style={{ padding: 20 }}><Empty text="筋肉マップは筋トレ記録後に表示されます" /></div>}
+          </SCard>
+        </>
+      )}
       {mode === "body" && (bwD.length < 2 ? <Empty text="体重データが少ないです。ツール→栄養から記録できます" /> : <GCard title="体重推移（kg）"><ResponsiveContainer width="100%" height={150}><LineChart data={bwD} margin={{ left: -12, right: 8, top: 4, bottom: 0 }}><CartesianGrid strokeDasharray="3 3" stroke={C.border} /><XAxis dataKey="date" tick={{ fill: C.muted, fontSize: 9 }} axisLine={false} tickLine={false} /><YAxis tick={{ fill: C.muted, fontSize: 9 }} axisLine={false} tickLine={false} /><Tooltip {...tt} /><Line type="monotone" dataKey="体重" stroke={C.teal} strokeWidth={2.5} dot={{ fill: C.teal, r: 3, strokeWidth: 0 }} activeDot={{ r: 5 }} /></LineChart></ResponsiveContainer></GCard>)}
     </div>
   );
@@ -1194,6 +1349,97 @@ function GCard({ title, sub, children }) {
 
 function Empty({ text = "データが少ないです" }) {
   return <div style={{ textAlign: "center", color: C.muted, padding: "28px 0", ...typo.caption }}>{text}</div>;
+}
+
+function MuscleMapCard({ parts, side = "front", onSideChange, compact = false }) {
+  const uniqParts = [...new Set(parts || [])];
+  return (
+    <div>
+      {onSideChange && (
+        <div style={{ display: "flex", gap: 6, marginBottom: 10, justifyContent: compact ? "flex-start" : "center" }}>
+          {["front", "back"].map((v) => (
+            <button key={v} onClick={() => onSideChange(v)} className="tap" style={{ padding: compact ? "5px 10px" : "7px 12px", borderRadius: 999, border: `1px solid ${side === v ? C.amber : C.border}`, background: side === v ? `${C.amber}16` : C.surface, color: side === v ? C.amber : C.muted, ...typo.caption, fontSize: 11, cursor: "pointer" }}>
+              {v === "front" ? "前面" : "背面"}
+            </button>
+          ))}
+        </div>
+      )}
+      <div style={{ display: "grid", gridTemplateColumns: compact ? "1fr" : "1.1fr .9fr", gap: 12, alignItems: "center" }}>
+        <BodySilhouette side={side} activeParts={uniqParts} compact={compact} />
+        {!compact && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {uniqParts.map((part) => (
+              <div key={part} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: "9px 10px" }}>
+                <div style={{ ...typo.bodySemi, fontSize: 12, color: MG[part].color }}>{part}</div>
+                <div style={{ ...typo.caption, color: C.muted, marginTop: 3 }}>{MG_DETAIL[part].jp} / {MG_DETAIL[part].note}</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+      {compact && uniqParts.length > 0 && (
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10 }}>
+          {uniqParts.slice(0, 4).map((part) => (
+            <span key={part} style={{ padding: "4px 9px", borderRadius: 999, background: `${MG[part].color}16`, border: `1px solid ${MG[part].color}32`, color: MG[part].color, ...typo.caption, fontSize: 11 }}>
+              {part}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BodySilhouette({ side, activeParts, compact = false }) {
+  const base = compact ? 170 : 220;
+  const active = new Set(activeParts);
+  const fullBody = active.has("全身");
+  const isOn = (part) => fullBody || active.has(part);
+  const zoneColor = (part) => (isOn(part) ? (fullBody && !active.has(part) ? MG.全身.color : MG[part].color) : "#221e16");
+  const zoneOpacity = (part) => (isOn(part) ? 0.9 : 0.42);
+  const common = { stroke: "#2c271d", strokeWidth: 2 };
+  const frontParts = (
+    <>
+      <path d="M75 63 C62 68,60 92,68 114 C73 125,84 130,95 127 C103 125,108 117,110 108 C112 118,117 125,125 127 C136 130,147 125,152 114 C160 92,158 68,145 63 C136 59,122 58,110 67 C98 58,84 59,75 63 Z" fill={zoneColor("胸")} opacity={zoneOpacity("胸")} />
+      <path d="M88 130 C82 145,80 160,84 180 C87 196,96 205,104 207 L104 129 Z" fill={zoneColor("腹")} opacity={zoneOpacity("腹")} />
+      <path d="M116 129 L116 207 C124 205,133 196,136 180 C140 160,138 145,132 130 Z" fill={zoneColor("腹")} opacity={zoneOpacity("腹")} />
+      <path d="M52 68 C42 76,37 90,37 108 C37 124,46 134,59 138 C66 126,68 108,66 89 C64 80,60 72,52 68 Z" fill={zoneColor("肩")} opacity={zoneOpacity("肩")} />
+      <path d="M168 68 C178 76,183 90,183 108 C183 124,174 134,161 138 C154 126,152 108,154 89 C156 80,160 72,168 68 Z" fill={zoneColor("肩")} opacity={zoneOpacity("肩")} />
+      <path d="M56 136 C46 152,43 170,48 188 C53 205,64 214,74 210 C79 206,80 196,77 183 C74 170,72 152,73 139 Z" fill={zoneColor("腕")} opacity={zoneOpacity("腕")} />
+      <path d="M164 136 C174 152,177 170,172 188 C167 205,156 214,146 210 C141 206,140 196,143 183 C146 170,148 152,147 139 Z" fill={zoneColor("腕")} opacity={zoneOpacity("腕")} />
+      <path d="M86 212 C73 224,68 246,72 270 C76 291,89 309,101 312 C109 300,110 268,107 213 Z" fill={zoneColor("脚")} opacity={zoneOpacity("脚")} />
+      <path d="M134 212 C147 224,152 246,148 270 C144 291,131 309,119 312 C111 300,110 268,113 213 Z" fill={zoneColor("脚")} opacity={zoneOpacity("脚")} />
+    </>
+  );
+  const backParts = (
+    <>
+      <path d="M75 65 C63 72,62 89,68 106 C74 121,89 128,102 126 L102 72 C93 62,83 61,75 65 Z" fill={zoneColor("肩")} opacity={zoneOpacity("肩")} />
+      <path d="M145 65 C157 72,158 89,152 106 C146 121,131 128,118 126 L118 72 C127 62,137 61,145 65 Z" fill={zoneColor("肩")} opacity={zoneOpacity("肩")} />
+      <path d="M74 111 C73 139,84 162,101 179 C107 164,109 145,107 110 C98 103,84 103,74 111 Z" fill={zoneColor("背中")} opacity={zoneOpacity("背中")} />
+      <path d="M146 111 C147 139,136 162,119 179 C113 164,111 145,113 110 C122 103,136 103,146 111 Z" fill={zoneColor("背中")} opacity={zoneOpacity("背中")} />
+      <path d="M86 176 C82 191,83 204,88 213 C94 224,102 229,110 230 C118 229,126 224,132 213 C137 204,138 191,134 176 Z" fill={zoneColor("全身")} opacity={zoneOpacity("全身")} />
+      <path d="M56 136 C46 152,43 170,48 188 C53 205,64 214,74 210 C79 206,80 196,77 183 C74 170,72 152,73 139 Z" fill={zoneColor("腕")} opacity={zoneOpacity("腕")} />
+      <path d="M164 136 C174 152,177 170,172 188 C167 205,156 214,146 210 C141 206,140 196,143 183 C146 170,148 152,147 139 Z" fill={zoneColor("腕")} opacity={zoneOpacity("腕")} />
+      <path d="M86 212 C73 224,68 246,72 270 C76 291,89 309,101 312 C109 300,110 268,107 213 Z" fill={zoneColor("脚")} opacity={zoneOpacity("脚")} />
+      <path d="M134 212 C147 224,152 246,148 270 C144 291,131 309,119 312 C111 300,110 268,113 213 Z" fill={zoneColor("脚")} opacity={zoneOpacity("脚")} />
+    </>
+  );
+
+  return (
+    <div style={{ background: `radial-gradient(circle at 50% 16%, rgba(240,165,0,.10), transparent 40%), ${C.surface}`, border: `1px solid ${C.border}`, borderRadius: 18, padding: compact ? "8px 4px" : "14px 10px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <svg viewBox="0 0 220 330" width={base} height={(base * 330) / 220} aria-label="muscle-map">
+        <g>
+          <circle cx="110" cy="34" r="24" fill="#17130d" {...common} />
+          <path d="M79 60 C65 66,58 80,58 98 L58 142 C58 163,74 179,88 188 L92 210 L128 210 L132 188 C146 179,162 163,162 142 L162 98 C162 80,155 66,141 60 C131 56,122 56,110 66 C98 56,89 56,79 60 Z" fill="#17130d" {...common} />
+          <path d="M92 210 L86 320" fill="none" {...common} strokeLinecap="round" />
+          <path d="M128 210 L134 320" fill="none" {...common} strokeLinecap="round" />
+          <path d="M58 100 L46 204" fill="none" {...common} strokeLinecap="round" />
+          <path d="M162 100 L174 204" fill="none" {...common} strokeLinecap="round" />
+          {side === "front" ? frontParts : backParts}
+        </g>
+      </svg>
+    </div>
+  );
 }
 
 function ToolsScreen({ sleep, saveSleep, nutri, saveNutri }) {
